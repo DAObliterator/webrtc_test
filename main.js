@@ -4,8 +4,7 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 const app = express();
 const server = createServer(app);
-const offers = [];
-const sockets = [];
+
 let allUniqueUsers = new Set();
 const io = new Server(server, {
   cors: {
@@ -20,7 +19,7 @@ const io = new Server(server, {
 
 io.on("connection", (socket) => {
   socket.on("find-partner", async (data) => {
-    console.log(`listening to the find-partner event on the server side ${JSON.stringify(socket.handshake.auth)}  \n`);
+    console.log(`listening to the find-partner event  ${JSON.stringify(socket.handshake.auth)}  \n`);
     const allActiveSockets = await io.fetchSockets();
 
     for (const i of allActiveSockets) {
@@ -34,35 +33,37 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("video-offer" , async (msg) => {
+    //some socket is sending the sdp relay to the receiver ---task 
+    console.log(`listening to video-offer event --- ${JSON.stringify(msg)}`)
+    //send it to the callee...
 
-  if (offers.length) {
-    socket.emit("availableOffers" , offers);
-  }
-
-  socket.on("newOffer", async (data) => {
-    //where to send this???
-
-    offers.push({
-      offeredRandomId: socket.handshake.auth.randomId,
-      offer: data,
-      offerIceCandidate: [],
-      answererUserName: null,
-      answer: null,
-      answererIceCandidates: []
-    });
-
+    const allActiveSockets = await io.fetchSockets();
+    for ( const i of allActiveSockets) {
+      if (i.handshake.auth.randomId === msg.remoteRandomId) {
+        socket.emit("video-offer", msg);
+      }
+    }
     
-    //socket.broadcast.emit send to all connected sockets except the caller 
-    socket.broadcast.emit("newOfferAwaiting", offers.slice(-1) );
 
-    
-  });
+  } )
 
-  socket.on("new-ice-candidate", (data) => {
+
+  
+
+  socket.on("new-ice-candidate", async (data) => {
     //where to send this???
     //send the delivered ice candidate information to the target ( also there in the data)
-    console.log(`listening to new-ice-candidate event on the server \n`)
-    socket.emit("new-ice-candidate", data);
+    console.log(`listening to new-ice-candidate event \n`);
+
+    const allActiveSockets = await io.fetchSockets();
+
+    for ( const i of allActiveSockets) {
+      if (i.handshake.auth.randomId === data.target) {
+           socket.emit("new-ice-candidate", data);
+      }
+    }
+   
   });
 
   socket.on("video-answer", async (data) => {
