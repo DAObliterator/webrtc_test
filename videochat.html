@@ -1,0 +1,31 @@
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div id="Main" style="height: 100%; background-color: rgb(156, 177, 255)">
+      <div
+        id="video-players-div"
+        style="
+          display: flex;
+          flex-direction: row;
+          justify-content: space-evenly;
+          align-items: center;
+          height: 25%;
+          background-color:rgb(0, 102, 255);
+        "
+      >
+        <video id="local-video"  style="width: 500px; height: 250px" autoplay playsinline></video>
+        <video id="remote-video" style="width: 500px; height: 250px" autoplay playsinline></video>
+      </div>
+      <p id="Room-Information" ></p>
+      <div id="user-name"></div>
+      <div id="errorMsg"></div>
+    </div>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" integrity="sha384-2huaZvOR9iDzHqslqwpR87isEmrfxqyWOF7hr7BY6KG0+hVKLoEXMPUJw3ynWuhO" crossorigin="anonymous"></script>
+    <script src="./client1.js"></script>
+  </body>
+</html>

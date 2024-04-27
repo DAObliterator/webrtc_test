@@ -1,0 +1,16 @@
+{
+  "name": "videochat",
+  "version": "1.0.0",
+  "description": "A simple video chat app",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon main.js"
+  },
+  "author": "Saradh",
+  "license": "MIT",
+  "dependencies": {
+    "socket.io": "^4.7.5"
+  }
+}
