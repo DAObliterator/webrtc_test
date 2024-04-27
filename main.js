@@ -35,8 +35,10 @@ io.on("connection", (socket) => {
 
   socket.on("video-offer" , async (msg) => {
     /*some socket is sending the sdp relay to the receiver ---task 
-    console.log(`listening to video-offer event --- ${JSON.stringify(msg)}`)
+    
     send it to the callee...*/
+
+    console.log(`listening to video-offer event --- ${JSON.stringify(msg)}`);
 
     const allActiveSockets = await io.fetchSockets();
     for ( const i of allActiveSockets) {

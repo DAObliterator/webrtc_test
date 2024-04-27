@@ -11,7 +11,6 @@ const localVideoEl = document.querySelector("#local-video");
 const remoteVideoEl = document.querySelector("#remote-video");
 const showVideoButton = document.querySelector("#showVideo");
 
-
 let remoteIceCandidate;
 
 let mediaConstraints = {
@@ -30,8 +29,6 @@ const socket = io.connect(`http://localhost:5010`, {
   },
 });
 
-
-
 document.getElementById("New-Chat").addEventListener("click", () => {
   console.log(`New-Chat Button Clicked \n`);
 
@@ -39,32 +36,26 @@ document.getElementById("New-Chat").addEventListener("click", () => {
     randomId: randomId,
   });
 
- 
   call();
 });
 
- socket.on("room-joined", (data) => {
-   console.log(
-     JSON.stringify(data),
-     " - data , listening to room-joined event"
-   );
-   for ( const i of data.participants) {
-    if ( i.randomId !== window.sessionStorage.getItem("randomId") ) {
+socket.on("room-joined", (data) => {
+  console.log(JSON.stringify(data), " - data , listening to room-joined event");
+  for (const i of data.participants) {
+    if (i.randomId !== window.sessionStorage.getItem("randomId")) {
       remoteRandomId = i.randomId;
-      window.sessionStorage.setItem("remoteRandomId" , remoteRandomId);
-
+      window.sessionStorage.setItem("remoteRandomId", remoteRandomId);
     }
-   }
-   roomName = data.roomName;
-   window.sessionStorage.setItem("roomName", roomName);
-   window.sessionStorage.setItem("remoteRandomId", remoteRandomId);
- });
+  }
+  roomName = data.roomName;
+  window.sessionStorage.setItem("roomName", roomName);
+  window.sessionStorage.setItem("remoteRandomId", remoteRandomId);
+});
 
 const call = () => {
   if (myPeerConnection) {
     alert("You cannot start a call because you have got already one open\n");
   } else {
-
     createPeerConnection();
     navigator.mediaDevices
       .getUserMedia(mediaConstraints)
@@ -113,20 +104,18 @@ function handleNegotiationNeededEvent() {
     .createOffer()
     .then((offer) => {
       offer_ = offer;
-      console.log(`setting local description as offer --- ${JSON.stringify(offer)} \n`);
+      console.log(
+        `setting local description as offer --- ${JSON.stringify(offer)} \n`
+      );
       myPeerConnection.setLocalDescription(offer); //sdp
-
-
+    })
+    .then(() => {
       socket.emit("video-offer", {
         randomId: window.sessionStorage.getItem("randomId"),
         remoteRandomId: window.sessionStorage.getItem("remoteRandomId"),
         description: "offer",
-        sdp: offer,
+        sdp: myPeerConnection.localDescription, //this becomes null, dont know why
       });
-      
-    })
-    .then(() => {
-      
     })
     .catch((error) => {
       console.log(`ran into error when creating offer - ${error}`);
@@ -139,7 +128,7 @@ socket.on("video-offer", (data) => {
   if (data.remoteRandomId === window.sessionStorage.getItem("randomId")) {
     //you are the callee
 
-    console.log("call intended for you , you are the callee")
+    console.log("call intended for you , you are the callee");
 
     let remoteRandomId_;
     remoteRandomId_ = data.remoteRandomId;
@@ -164,10 +153,10 @@ socket.on("video-offer", (data) => {
         const msg = {
           randomId: data.randomId,
           remoteRandomId: remoteRandomId_,
-          sdp: myPeerConnection.localDescription,
+          sdp: myPeerConnection.localDescription, //this becomes null, dont know why
         };
 
-        socket.emit("video-answer", data);
+        socket.emit("video-answer", msg);
       })
       .catch((error) => console.log(`${error} ran into some error `));
   }
