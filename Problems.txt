@@ -1,0 +1,1 @@
+video-offer being sent to the caller , check the caller socket auth headers

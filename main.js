@@ -34,14 +34,15 @@ io.on("connection", (socket) => {
   });
 
   socket.on("video-offer" , async (msg) => {
-    //some socket is sending the sdp relay to the receiver ---task 
+    /*some socket is sending the sdp relay to the receiver ---task 
     console.log(`listening to video-offer event --- ${JSON.stringify(msg)}`)
-    //send it to the callee...
+    send it to the callee...*/
 
     const allActiveSockets = await io.fetchSockets();
     for ( const i of allActiveSockets) {
-      if (i.handshake.auth.randomId === msg.remoteRandomId) {
-        socket.emit("video-offer", msg);
+      console.log(`${i.handshake.auth.randomId} --- randomId in loop ${msg.randomId} -- sender's randomId`)
+      if (i.handshake.auth.randomId !== msg.randomId) {
+        i.emit("video-offer", msg);
       }
     }
     
