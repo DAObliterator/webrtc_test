@@ -116,7 +116,7 @@ function handleNegotiationNeededEvent() {
       console.log(`setting local description as offer --- ${JSON.stringify(offer)} \n`);
       myPeerConnection.setLocalDescription(offer); //sdp
 
-      
+
       socket.emit("video-offer", {
         randomId: window.sessionStorage.getItem("randomId"),
         remoteRandomId: window.sessionStorage.getItem("remoteRandomId"),
@@ -136,7 +136,7 @@ function handleNegotiationNeededEvent() {
 socket.on("video-offer", (data) => {
   //in this case you are the callee....
   console.log(`${JSON.stringify(data)} --- from the caller `);
-  if (data.remoteRandomId === randomId) {
+  if (data.remoteRandomId === window.sessionStorage.getItem("randomId")) {
     //you are the callee
 
     console.log("call intended for you , you are the callee")
@@ -152,7 +152,7 @@ socket.on("video-offer", (data) => {
       .then(() => navigator.mediaDevices.getUserMedia(mediaConstraints))
       .then((stream) => {
         localStream = stream;
-        document.getElementById("local_video").srcObject = localStream;
+        localVideoEl.srcObject = localStream;
 
         localStream
           .getTracks()
@@ -175,7 +175,7 @@ socket.on("video-offer", (data) => {
 
 socket.on("video-answer", (msg) => {
   //in this case you are the caller...
-  console.log(`listening to video-answer evevnt  \n`);
+  console.log(`listening to video-answer event -- ${JSON.stringify(msg)}   \n`);
   myPeerConnection.setRemoteDescription(msg.sdp);
 });
 
