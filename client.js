@@ -15,7 +15,10 @@ let remoteIceCandidate;
 
 let mediaConstraints = {
   //audio: true,
-  video: true,
+  video: {
+    width: 1080,
+    height: 540,
+  },
 };
 
 if (!window.sessionStorage.getItem("randomId")) {
@@ -23,7 +26,7 @@ if (!window.sessionStorage.getItem("randomId")) {
   window.sessionStorage.setItem("randomId", randomId);
 }
 
-const socket = io.connect(`http://localhost:5010`, {
+const socket = io.connect("https://localhost:5010", {
   auth: {
     randomId: window.sessionStorage.getItem("randomId"),
   },
@@ -72,11 +75,22 @@ const call = () => {
 };
 
 function createPeerConnection() {
-  myPeerConnection = new RTCPeerConnection();
+  myPeerConnection = new RTCPeerConnection({
+    iceServers: [
+      {
+        urls: [
+          "stun:stun1.l.google.com:19302",
+          "stun:stun2.l.google.com:19302",
+        ],
+      },
+    ],
+  });
 
   myPeerConnection.onicecandidate = handleICECandidateEvent;
   myPeerConnection.ontrack = handleTrackEvent;
   myPeerConnection.onnegotiationneeded = handleNegotiationNeededEvent;
+  myPeerConnection.oniceconnectionstatechange =
+    handleICEConnectionStateChangeEvent;
 }
 
 function handleICECandidateEvent(e) {
@@ -90,36 +104,58 @@ function handleICECandidateEvent(e) {
   }
 }
 
-function handleTrackEvent(ev) {
-  if (ev.streams && ev.streams[0]) {
-    remoteVideoEl.srcObject = ev.streams[0];
-  } else {
-    remoteStream = new MediaStream(ev.track);
-    remoteVideoEl.srcObject = remoteStream;
+async function handleTrackEvent(ev) {
+  console.log(`new track coming in , ev -- ${JSON.stringify(ev)}`);
+ 
+  if (!remoteStream) {
+    remoteStream = new MediaStream();
   }
+  console.log( ev.track , " --- ev.track before addTrack --- ")
+  remoteStream.addTrack(ev.track);
+  console.log("Track kind:", ev.track.kind); 
+  remoteVideoEl.srcObject = remoteStream;
+
+  
+
+
 }
 
 function handleNegotiationNeededEvent() {
-  myPeerConnection
-    .createOffer()
-    .then((offer) => {
-      offer_ = offer;
-      console.log(
-        `setting local description as offer --- ${JSON.stringify(offer)} \n`
-      );
-      myPeerConnection.setLocalDescription(offer); //sdp
-    })
-    .then(() => {
-      socket.emit("video-offer", {
-        randomId: window.sessionStorage.getItem("randomId"),
-        remoteRandomId: window.sessionStorage.getItem("remoteRandomId"),
-        description: "offer",
-        sdp: myPeerConnection.localDescription, //this becomes null, dont know why
-      });
-    })
-    .catch((error) => {
-      console.log(`ran into error when creating offer - ${error}`);
-    });
+  myPeerConnection.createOffer().then((offer) => {
+    offer_ = offer;
+    console.log(
+      `setting local description as offer --- ${JSON.stringify(offer)} \n`
+    );
+    return myPeerConnection
+      .setLocalDescription(offer)
+      .then(() => {
+        console.log(
+          myPeerConnection.localDescription,
+          " localDescription after it was set to offer"
+        );
+        const msg = {
+          randomId: window.sessionStorage.getItem("randomId"),
+          remoteRandomId: window.sessionStorage.getItem("remoteRandomId"),
+          description: "offer",
+          sdp: myPeerConnection.localDescription, //this becomes null, dont know why
+        };
+
+        socket.emit("video-offer", msg);
+      })
+      .catch((error) => {
+        console.log(`ran into error when creating offer - ${error}`);
+      }); //sdp
+  });
+}
+
+function handleICEConnectionStateChangeEvent(event) {
+  console.log(myPeerConnection.iceConnectionState , "---iceConnectionState---")
+  switch (myPeerConnection.iceConnectionState) {
+    case "closed":
+    case "failed":
+      closeVideoCall();
+      break;
+  }
 }
 
 socket.on("video-offer", (data) => {
@@ -148,24 +184,32 @@ socket.on("video-offer", (data) => {
           .forEach((track) => myPeerConnection.addTrack(track, localStream));
       })
       .then(() => myPeerConnection.createAnswer())
-      .then((answer) => myPeerConnection.setLocalDescription(answer))
-      .then(() => {
-        const msg = {
-          randomId: data.randomId,
-          remoteRandomId: remoteRandomId_,
-          sdp: myPeerConnection.localDescription, //this becomes null, dont know why
-        };
+      .then((answer) => {
+        return myPeerConnection
+          .setLocalDescription(answer)
+          .then(() => {
+            console.log(
+              myPeerConnection.localDescription,
+              " localDescription after it was set to answer "
+            );
+            const msg = {
+              randomId: window.sessionStorage.getItem("randomId"),
+              remoteRandomId: window.sessionStorage.getItem("remoteRandomId"),
+              description: "answer",
+              sdp: myPeerConnection.localDescription, //this becomes null, dont know why
+            };
 
-        socket.emit("video-answer", msg);
-      })
-      .catch((error) => console.log(`${error} ran into some error `));
+            socket.emit("video-answer", msg);
+          })
+          .catch((error) => console.log(`${error} ran into some error `));
+      });
   }
 });
 
-socket.on("video-answer", (msg) => {
+socket.on("video-answer", async (msg) => {
   //in this case you are the caller...
   console.log(`listening to video-answer event -- ${JSON.stringify(msg)}   \n`);
-  myPeerConnection.setRemoteDescription(msg.sdp);
+  await myPeerConnection.setRemoteDescription(msg.sdp);
 });
 
 socket.on("new-ice-candidate", (msg) => {

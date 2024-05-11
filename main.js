@@ -1,17 +1,21 @@
 import fs from "fs";
 import express from "express";
+import dotenv from "dotenv";
+import https from "https";
 import { createServer } from "http";
 import { Server } from "socket.io";
 const app = express();
-const server = createServer(app);
+const key = fs.readFileSync("cert.key");
+const cert = fs.readFileSync("cert.crt");
+const server = https.createServer( { key , cert },  app);
+dotenv.config({ path: "./config.env"});
 
 let allUniqueUsers = new Set();
+
 const io = new Server(server, {
   cors: {
     origin: [
-      "http://127.0.0.1:5500",
-      "http://192.168.137.1",
-      "http://192.168.137.130",
+      process.env.FRONTEND_URI
     ],
     methods: ["GET", "POST"],
   },
@@ -55,8 +59,10 @@ io.on("connection", (socket) => {
   
 
   socket.on("new-ice-candidate", async (data) => {
+
     //where to send this???
     //send the delivered ice candidate information to the target ( also there in the data)
+
     console.log(`listening to new-ice-candidate event \n`);
 
     const allActiveSockets = await io.fetchSockets();
@@ -66,13 +72,12 @@ io.on("connection", (socket) => {
            socket.emit("new-ice-candidate", data);
       }
     }
-   
   });
 
   socket.on("video-answer", async (data) => {
     const allActiveSockets = await io.fetchSockets();
     for (const i of allActiveSockets) {
-      if (i.handshake.auth.randomId === data.randomId) {
+      if (i.handshake.auth.randomId === data.remoteRandomId) {
         i.emit("video-answer", data);
       }
     }
@@ -107,6 +112,10 @@ function createRoom(callerSocketObject, calleeSocketObject) {
     ],
   });
 }
+
+app.get("/" , (req,res) => {
+  res.send("<h1>hello</h1>")
+})
 
 const PORT = 5010;
 
